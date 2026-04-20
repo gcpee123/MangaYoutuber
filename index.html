@@ -776,8 +776,8 @@ async function autoDetectCharacters() {
   
   try {
     // Initialize Tesseract worker
-    const { TesseractWorker } = Tesseract;
-    const worker = new TesseractWorker();
+    const { createWorker } = Tesseract;
+    const worker = await createWorker();
     
     for (const panel of samplePanels) {
       if (!panel.url) continue;
@@ -790,11 +790,10 @@ async function autoDetectCharacters() {
         const blob = await response.blob();
         
         // Run OCR
-        const result = await worker.recognize(blob);
-        const text = result.data.text || '';
+        const { data: { text } } = await worker.recognize(blob);
         
         // Extract potential character names (words in all caps or title case)
-        const words = text.split(/[\s\n,;:()[\]]+/).filter(w => w.length > 1 && w.length < 20);
+        const words = (text || '').split(/[\s\n,;:()[\]]+/).filter(w => w.length > 1 && w.length < 20);
         words.forEach(word => {
           // Look for names: single words or two-word names (likely character names)
           if (/^[A-Z][a-z]*$/.test(word) || /^[A-Z]+-?[A-Z][a-z]*$/.test(word)) {
