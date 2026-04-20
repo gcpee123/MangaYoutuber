@@ -1388,7 +1388,7 @@ async function exportPanelZip() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   
-  log(`✓ Downloaded ${count} images as ZIP${failed>0?` (${failed} failed)':''}`, 'ok');
+  log(`✓ Downloaded ${count} images as ZIP${failed>0 ? ` (${failed} failed)` : ''}`, 'ok');
   toast(`✓ Downloaded ${count} images as ZIP`, 'success');
 }
 
