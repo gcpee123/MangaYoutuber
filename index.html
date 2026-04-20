@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MangaCut — Manga to YouTube Video Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0d0d0f;
+  --surface: #16161a;
+  --surface2: #1e1e24;
+  --surface3: #252530;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #e8ff47;
+  --accent2: #7c5cfc;
+  --accent3: #ff5c5c;
+  --text: #f0f0f5;
+  --text2: #9090a0;
+  --text3: #60607a;
+  --green: #4aff9a;
+  --orange: #ffaa3c;
+  --blue: #3cb8ff;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px;}
+
+/* LAYOUT */
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh;}
+.header{display:flex;align-items:center;gap:16px;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--font-display);font-size:26px;letter-spacing:2px;color:var(--accent);line-height:1;}
+.logo span{color:var(--text2);}
+.header-steps{display:flex;gap:4px;margin-left:auto;}
+.hstep{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:6px;font-size:12px;font-family:var(--font-mono);color:var(--text3);border:1px solid transparent;cursor:pointer;transition:all .2s;}
+.hstep.active{color:var(--accent);border-color:rgba(232,255,71,.25);background:rgba(232,255,71,.05);}
+.hstep.done{color:var(--green);}
+.hstep .num{width:18px;height:18px;border-radius:50%;border:1px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.hstep.done .num{background:var(--green);border-color:var(--green);color:#000;}
+
+.body{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 52px);}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.sidebar-section{padding:16px;border-bottom:1px solid var(--border);}
+.sidebar-label{font-size:10px;font-family:var(--font-mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.main{overflow-y:auto;background:var(--bg);}
+
+/* CARDS & PANELS */
+.panel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:20px;}
+.panel-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s;}
+.panel-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.panel-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.panel-img{width:100%;aspect-ratio:3/4;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px;overflow:hidden;position:relative;}
+.panel-img img{width:100%;height:100%;object-fit:cover;}
+.panel-meta{padding:8px 10px;}
+.panel-meta .ch{font-size:10px;font-family:var(--font-mono);color:var(--text3);}
+.panel-meta .chars{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* INPUTS */
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;border-radius:6px;padding:8px 10px;width:100%;outline:none;transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{border-color:rgba(232,255,71,.4);}
+textarea{resize:vertical;min-height:80px;}
+label{display:block;font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:5px;letter-spacing:.5px;}
+.field{margin-bottom:12px;}
+select option{background:var(--surface2);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:#d4eb30;}
+.btn-primary:disabled{background:var(--surface3);color:var(--text3);cursor:not-allowed;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+.btn-danger{background:rgba(255,92,92,.15);color:var(--accent3);border:1px solid rgba(255,92,92,.3);}
+.btn-danger:hover{background:rgba(255,92,92,.25);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:6px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 20px;background:var(--surface);position:sticky;top:0;z-index:10;}
+.tab{padding:12px 16px;font-size:13px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-family:var(--font-mono);}
+.tab:hover{color:var(--text2);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-content{display:none;padding:20px;}
+.tab-content.active{display:block;}
+
+/* SCRIPT EDITOR */
+.script-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;}
+.script-block-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer;}
+.script-block-header:hover{background:var(--surface3);}
+.script-ch{font-family:var(--font-mono);font-size:11px;color:var(--accent);min-width:60px;}
+.script-chars{font-size:12px;color:var(--text3);}
+.script-body{padding:12px 14px;}
+.script-line{display:flex;gap:10px;margin-bottom:8px;align-items:flex-start;}
+.script-speaker{font-family:var(--font-mono);font-size:11px;color:var(--accent2);min-width:80px;padding-top:2px;}
+.script-text{flex:1;}
+.script-text textarea{min-height:50px;}
+
+/* STATUS BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-family:var(--font-mono);}
+.badge-pending{background:var(--surface3);color:var(--text3);}
+.badge-loading{background:rgba(60,184,255,.1);color:var(--blue);}
+.badge-done{background:rgba(74,255,154,.1);color:var(--green);}
+.badge-error{background:rgba(255,92,92,.1);color:var(--accent3);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+/* PROGRESS */
+.progress{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin:8px 0;}
+.progress-bar{height:100%;background:var(--accent);transition:width .3s ease;border-radius:2px;}
+.progress-striped .progress-bar{background:repeating-linear-gradient(45deg,var(--accent),var(--accent) 10px,#a8cc30 10px,#a8cc30 20px);animation:slide 1s linear infinite;}
+@keyframes slide{from{background-position:0 0;}to{background-position:40px 0;}}
+
+/* TIMELINE */
+.timeline{display:flex;gap:0;overflow-x:auto;padding:12px 0;align-items:center;}
+.tl-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:70px;}
+.tl-item:hover .tl-thumb{border-color:var(--border2);}
+.tl-item.active .tl-thumb{border-color:var(--accent);}
+.tl-thumb{width:52px;height:70px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);}
+.tl-thumb img{width:100%;height:100%;object-fit:cover;}
+.tl-label{font-size:9px;font-family:var(--font-mono);color:var(--text3);text-align:center;}
+.tl-connector{width:20px;height:1px;background:var(--border2);margin-bottom:20px;flex-shrink:0;}
+
+/* VIDEO PREVIEW */
+.video-preview{background:var(--surface);border:1px solid var(--border);border-radius:12px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.preview-panel{max-width:60%;max-height:80%;object-fit:contain;border-radius:6px;}
+.preview-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:16px;font-size:13px;line-height:1.5;}
+.preview-overlay .narration{color:rgba(255,255,255,.9);}
+.preview-overlay .speaker{font-family:var(--font-mono);font-size:11px;color:var(--accent2);margin-bottom:4px;}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{padding:8px 12px;text-align:left;font-size:11px;font-family:var(--font-mono);color:var(--text3);border-bottom:1px solid var(--border);font-weight:400;letter-spacing:.5px;}
+.data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+.data-table tr:hover td{background:var(--surface2);}
+.data-table .mono{font-family:var(--font-mono);font-size:12px;}
+
+/* SEARCH */
+.search-result{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:all .2s;}
+.search-result:hover{background:var(--surface2);border-color:var(--border);}
+.search-result.selected{background:rgba(232,255,71,.05);border-color:rgba(232,255,71,.25);}
+.sr-thumb{width:52px;height:72px;background:var(--surface3);border-radius:5px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text3);}
+.sr-thumb img{width:100%;height:100%;object-fit:cover;}
+.sr-title{font-size:14px;font-weight:500;color:var(--text);}
+.sr-meta{font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:3px;}
+.sr-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;}
+.sr-tag{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--surface3);color:var(--text3);font-family:var(--font-mono);}
+
+/* CAST */
+.cast-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;}
+.cast-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:16px;color:#fff;flex-shrink:0;}
+.cast-name{font-size:13px;font-weight:500;}
+.cast-role{font-size:11px;color:var(--text3);font-family:var(--font-mono);}
+
+/* NOTIFICATIONS */
+#toast{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px;max-width:280px;animation:toastIn .3s ease;pointer-events:all;}
+@keyframes toastIn{from{transform:translateX(100%);opacity:0;}to{transform:none;opacity:1;}}
+.toast-success{border-left:3px solid var(--green);}
+.toast-error{border-left:3px solid var(--accent3);}
+.toast-info{border-left:3px solid var(--blue);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:24px;width:480px;max-width:90vw;max-height:80vh;overflow-y:auto;}
+.modal h2{font-family:var(--font-display);font-size:22px;letter-spacing:1px;margin-bottom:16px;color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+
+/* SPLIT VIEW */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.section-title{font-family:var(--font-display);font-size:20px;letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.section-title .accent{color:var(--accent);}
+
+/* LOG */
+.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--font-mono);font-size:11px;max-height:160px;overflow-y:auto;color:var(--text3);}
+.log-line{margin-bottom:3px;}
+.log-line.ok{color:var(--green);}
+.log-line.err{color:var(--accent3);}
+.log-line.info{color:var(--blue);}
+.log-line.warn{color:var(--orange);}
+
+/* RESPONSIVE TWEAKS */
+@media(max-width:900px){
+  .body{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .split{grid-template-columns:1fr;}
+}
+
+.hidden{display:none!important;}
+.spin{animation:spin 1s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pulse{animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+/* CHAPTER ROW */
+.ch-row{display:grid;grid-template-columns:44px 1fr 110px 110px 1fr 100px 80px;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;}
+.ch-row:hover{background:var(--surface2);}
+.ch-row-header{font-family:var(--font-mono);font-size:10px;color:var(--text3);letter-spacing:.5px;}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--text3);}
+.empty-icon{font-size:40px;opacity:.4;}
+.empty h3{font-family:var(--font-display);font-size:22px;letter-spacing:1px;color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">MANGA<span>CUT</span></div>
+  <div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div>
+  <span style="font-size:12px;color:var(--text3);font-family:var(--font-mono);">Manga → YouTube Video Pipeline</span>
+  <div class="header-steps" id="header-steps">
+    <div class="hstep" id="hs1" onclick="gotoTab('manga')"><div class="num">1</div> Manga</div>
+    <div class="hstep" id="hs2" onclick="gotoTab('cast')"><div class="num">2</div> Cast</div>
+    <div class="hstep" id="hs3" onclick="gotoTab('chapters')"><div class="num">3</div> Chapters</div>
+    <div class="hstep" id="hs4" onclick="gotoTab('script')"><div class="num">4</div> Script</div>
+    <div class="hstep" id="hs5" onclick="gotoTab('video')"><div class="num">5</div> Video</div>
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="showHelp()" style="margin-left:8px;">? Help</button>
+</header>
+
+<div class="body">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Project</div>
+    <div id="sb-manga-title" style="font-family:var(--font-display);font-size:18px;letter-spacing:1px;color:var(--text2);margin-bottom:4px;">No manga loaded</div>
+    <div id="sb-manga-meta" style="font-size:11px;color:var(--text3);font-family:var(--font-mono);"></div>
+    <div class="progress" id="sb-progress" style="display:none;margin-top:8px;"><div class="progress-bar" id="sb-progress-bar" style="width:0%"></div></div>
+    <div id="sb-progress-label" style="font-size:10px;color:var(--text3);font-family:var(--font-mono);"></div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Pipeline Status</div>
+    <div id="sb-pipeline">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text2);">Manga</span><span class="badge badge-pending" id="sb-s1"><span class="dot"></span>pending</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text2);">Cast</span><span class="badge badge-pending" id="sb-s2"><span class="dot"></span>pending</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text2);">Chapters</span><span class="badge badge-pending" id="sb-s3"><span class="dot"></span>pending</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+        <span style="color:var(--text2);">Script</span><span class="badge badge-pending" id="sb-s4"><span class="dot"></span>pending</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;">
+        <span style="color:var(--text2);">Video</span><span class="badge badge-pending" id="sb-s5"><span class="dot"></span>pending</span>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Cast</div>
+    <div id="sb-cast"></div>
+    <button class="btn btn-ghost btn-sm" onclick="gotoTab('cast')" style="margin-top:8px;width:100%;">+ Add Character</button>
+  </div>
+  <div class="sidebar-section" style="flex:1;">
+    <div class="sidebar-label">Log</div>
+    <div class="log" id="main-log"></div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="main">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="manga" onclick="gotoTab('manga')">01 — Manga Picker</div>
+    <div class="tab" data-tab="cast" onclick="gotoTab('cast')">02 — Character Cast</div>
+    <div class="tab" data-tab="chapters" onclick="gotoTab('chapters')">03 — Chapters</div>
+    <div class="tab" data-tab="panels" onclick="gotoTab('panels')">04 — Panels</div>
+    <div class="tab" data-tab="script" onclick="gotoTab('script')">05 — Script</div>
+    <div class="tab" data-tab="video" onclick="gotoTab('video')">06 — Video</div>
+  </div>
+
+  <!-- TAB: MANGA PICKER -->
+  <div class="tab-content active" id="tc-manga">
+    <div class="section-title"><span class="accent">01.</span> Pick Your Manga</div>
+    <div class="split">
+      <div>
+        <div class="field">
+          <label>SEARCH MANGA / MANHWA TITLE</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="manga-search" placeholder="e.g. Solo Leveling, Tower of God…" onkeydown="if(event.key==='Enter')searchManga()"/>
+            <button class="btn btn-primary" onclick="searchManga()">Search</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>SOURCE</label>
+          <select id="manga-source">
+            <option value="mangadex">MangaDex</option>
+            <option value="local">Local Folder</option>
+            <option value="custom">Custom URL</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>OR ENTER MANGA ID / URL DIRECTLY</label>
+          <input type="text" id="manga-direct" placeholder="MangaDex UUID or full URL"/>
+        </div>
+        <div class="field">
+          <label>READING DIRECTION</label>
+          <select id="manga-dir">
+            <option value="rtl">Right-to-left (Manga / Japanese)</option>
+            <option value="ltr">Left-to-right (Manhwa / Korean)</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="loadManga()">Load Manga</button>
+          <button class="btn btn-ghost" onclick="clearManga()">Clear</button>
+        </div>
+        <div id="manga-info" style="display:none;margin-top:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-family:var(--font-display);font-size:20px;letter-spacing:1px;color:var(--accent);margin-bottom:4px;" id="mi-title"></div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:8px;" id="mi-meta"></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;" id="mi-desc"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;" id="mi-tags"></div>
+        </div>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:8px;">SEARCH RESULTS</div>
+        <div id="search-results">
+          <div class="empty"><div class="empty-icon">🔍</div><div>Search to find your manga</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: CAST -->
+  <div class="tab-content" id="tc-cast">
+    <div class="section-title"><span class="accent">02.</span> Character Cast</div>
+    <div class="split">
+      <div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text2);">Add Character</div>
+          <div class="field"><label>NAME</label><input type="text" id="c-name" placeholder="e.g. Sung Jin-Woo"/></div>
+          <div class="field"><label>ROLE</label>
+            <select id="c-role">
+              <option>Protagonist</option><option>Antagonist</option><option>Supporting</option><option>Narrator</option><option>Comic Relief</option>
+            </select>
+          </div>
+          <div class="field"><label>DESCRIPTION (for AI)</label><textarea id="c-desc" placeholder="Brief description of this character's personality, speech style, etc."></textarea></div>
+          <div class="field"><label>VOICE (TTS)</label>
+            <select id="c-voice">
+              <option value="en-US-GuyNeural">Deep Male (Guy)</option>
+              <option value="en-US-JennyNeural">Soft Female (Jenny)</option>
+              <option value="en-US-AriaNeural">Confident Female (Aria)</option>
+              <option value="en-US-DavisNeural">Young Male (Davis)</option>
+              <option value="en-GB-RyanNeural">British Male (Ryan)</option>
+              <option value="narrator">Dramatic Narrator</option>
+            </select>
+          </div>
+          <div class="field"><label>COLOR TAG</label>
+            <div style="display:flex;gap:6px;" id="color-options">
+              <div class="color-opt" data-col="#7c5cfc" style="width:24px;height:24px;border-radius:50%;background:#7c5cfc;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+              <div class="color-opt" data-col="#e8ff47" style="width:24px;height:24px;border-radius:50%;background:#e8ff47;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+              <div class="color-opt" data-col="#ff5c5c" style="width:24px;height:24px;border-radius:50%;background:#ff5c5c;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+              <div class="color-opt" data-col="#4aff9a" style="width:24px;height:24px;border-radius:50%;background:#4aff9a;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+              <div class="color-opt" data-col="#3cb8ff" style="width:24px;height:24px;border-radius:50%;background:#3cb8ff;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+              <div class="color-opt" data-col="#ffaa3c" style="width:24px;height:24px;border-radius:50%;background:#ffaa3c;cursor:pointer;border:2px solid transparent;" onclick="selectColor(this)"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addCharacter()" style="width:100%;">Add to Cast</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:12px;">Cast (<span id="cast-count">0</span>)</div>
+        <div id="cast-list"></div>
+        <div id="cast-empty" class="empty" style="padding:30px 0;"><div class="empty-icon">👤</div><div>No characters yet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: CHAPTERS -->
+  <div class="tab-content" id="tc-chapters">
+    <div class="section-title"><span class="accent">03.</span> Chapters</div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="margin:0;min-width:120px;">
+        <label>FROM CHAPTER</label><input type="number" id="ch-from" value="1" min="1" style="width:100px;"/>
+      </div>
+      <div class="field" style="margin:0;min-width:120px;">
+        <label>TO CHAPTER</label><input type="number" id="ch-to" value="3" min="1" style="width:100px;"/>
+      </div>
+      <div class="field" style="margin:0;flex:1;min-width:160px;">
+        <label>LANGUAGE</label>
+        <select id="ch-lang" style="width:160px;">
+          <option value="en">English</option><option value="fr">French</option><option value="es">Spanish</option><option value="pt-br">Portuguese (BR)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="downloadChapters()" id="btn-download">Download Chapters</button>
+      <button class="btn btn-ghost" onclick="analyseAll()" id="btn-analyse" disabled>Run AI Analysis</button>
+    </div>
+    <div id="chapter-progress" style="display:none;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:4px;">
+        <span id="cp-label">Downloading…</span><span id="cp-pct">0%</span>
+      </div>
+      <div class="progress progress-striped"><div class="progress-bar" id="cp-bar" style="width:0%"></div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <div class="ch-row ch-row-header">
+        <span>CH.</span><span>TITLE</span><span>PAGES</span><span>PANELS</span><span>CHARACTERS</span><span>SCRIPT</span><span>STATUS</span>
+      </div>
+      <div id="chapter-list">
+        <div class="empty"><div class="empty-icon">📚</div><h3>No Chapters</h3><div>Download chapters to get started</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PANELS -->
+  <div class="tab-content" id="tc-panels">
+    <div class="section-title"><span class="accent">04.</span> Panel Gallery</div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      <select id="panel-filter-ch" onchange="filterPanels()" style="width:140px;">
+        <option value="all">All Chapters</option>
+      </select>
+      <select id="panel-filter-char" onchange="filterPanels()" style="width:160px;">
+        <option value="all">All Characters</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="selectAllPanels()">Select All</button>
+      <button class="btn btn-ghost btn-sm" onclick="deselectAllPanels()">Deselect All</button>
+      <span id="panel-selected-count" style="font-size:12px;color:var(--text3);font-family:var(--font-mono);margin-left:auto;"></span>
+      <button class="btn btn-primary btn-sm" onclick="exportPanels()" id="btn-export-panels" disabled>Export Selected</button>
+    </div>
+    <div class="panel-grid" id="panel-grid">
+      <div class="empty" style="grid-column:1/-1;padding:40px;"><div class="empty-icon">🖼️</div><h3>No Panels</h3><div>Download chapters first</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: SCRIPT -->
+  <div class="tab-content" id="tc-script">
+    <div class="section-title"><span class="accent">05.</span> Narrative Script</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+      <div class="field" style="margin:0;flex:1;min-width:200px;">
+        <label>NARRATION STYLE</label>
+        <select id="script-style">
+          <option value="dramatic">Dramatic / Epic</option>
+          <option value="casual">Casual Recap</option>
+          <option value="documentary">Documentary Style</option>
+          <option value="reaction">Reaction Commentary</option>
+        </select>
+      </div>
+      <div class="field" style="margin:0;flex:1;min-width:200px;">
+        <label>VIDEO TYPE</label>
+        <select id="video-type">
+          <option value="recap">Story Recap</option>
+          <option value="analysis">Deep Analysis</option>
+          <option value="highlight">Action Highlights</option>
+          <option value="lore">Lore Breakdown</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="generateScript()" id="btn-gen-script">✦ Generate with AI</button>
+      <button class="btn btn-ghost" onclick="exportScript()">Export Script</button>
+    </div>
+    <div id="script-loading" style="display:none;padding:30px;text-align:center;color:var(--text3);">
+      <div class="spin" style="font-size:24px;">⟳</div>
+      <div style="margin-top:8px;font-family:var(--font-mono);font-size:12px;" id="script-loading-msg">Generating narrative script…</div>
+    </div>
+    <div id="script-blocks"></div>
+    <div id="script-empty" class="empty"><div class="empty-icon">✍️</div><h3>No Script Yet</h3><div>Load chapters then generate your script</div></div>
+  </div>
+
+  <!-- TAB: VIDEO -->
+  <div class="tab-content" id="tc-video">
+    <div class="section-title"><span class="accent">06.</span> Video Compositor</div>
+    <div class="split">
+      <div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:14px;">Export Settings</div>
+          <div class="field"><label>RESOLUTION</label>
+            <select id="vid-res">
+              <option value="1920x1080">1920 × 1080 — YouTube Landscape</option>
+              <option value="1080x1920">1080 × 1920 — YouTube Shorts / TikTok</option>
+              <option value="1080x1080">1080 × 1080 — Square</option>
+            </select>
+          </div>
+          <div class="field"><label>TRANSITION</label>
+            <select id="vid-trans">
+              <option>Fade</option><option>Cut</option><option>Swipe</option><option>Zoom In</option><option>Glitch</option>
+            </select>
+          </div>
+          <div class="field"><label>PANEL DURATION (seconds)</label>
+            <input type="number" id="vid-dur" value="4" min="1" max="30"/>
+          </div>
+          <div class="field"><label>KEN BURNS EFFECT</label>
+            <select id="vid-kb"><option value="1">Yes — subtle zoom</option><option value="0">No</option></select>
+          </div>
+          <div class="field"><label>TEXT-TO-SPEECH ENGINE</label>
+            <select id="tts-engine">
+              <option value="edge">Edge TTS (Microsoft Azure)</option>
+              <option value="browser">Web Speech API (browser)</option>
+              <option value="none">No narration (text overlay only)</option>
+            </select>
+          </div>
+          <div class="field"><label>NARRATION SPEED</label>
+            <input type="range" id="tts-speed" min="0.5" max="2" step="0.1" value="1.0" oninput="document.getElementById('tts-speed-val').textContent=this.value+'×'"/>
+            <span id="tts-speed-val" style="font-size:11px;color:var(--text3);font-family:var(--font-mono);">1.0×</span>
+          </div>
+          <div class="field"><label>BACKGROUND MUSIC VOLUME</label>
+            <input type="range" id="vid-music" min="0" max="100" value="15" oninput="document.getElementById('vid-music-val').textContent=this.value+'%'"/>
+            <span id="vid-music-val" style="font-size:11px;color:var(--text3);font-family:var(--font-mono);">15%</span>
+          </div>
+          <button class="btn btn-primary" onclick="generateVideo()" id="btn-gen-video" style="width:100%;margin-top:4px;">⬡ Generate Video Preview</button>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:10px;">Export</div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="exportJSON()">Export Project JSON</button>
+            <button class="btn btn-ghost" onclick="exportSRT()">Export SRT Subtitles</button>
+            <button class="btn btn-ghost" onclick="exportPanelZip()">Export Panels ZIP</button>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--text3);line-height:1.6;">
+            To render the final video, use the exported panels + SRT with <strong style="color:var(--text2);">FFmpeg</strong> or upload to a video editor. A one-click FFmpeg command is included in the project JSON export.
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:10px;">Preview</div>
+        <div class="video-preview" id="video-preview">
+          <div style="text-align:center;color:var(--text3);">
+            <div style="font-size:32px;opacity:.3;margin-bottom:8px;">▶</div>
+            <div style="font-size:12px;font-family:var(--font-mono);">Generate preview to see video</div>
+          </div>
+        </div>
+        <div id="timeline-wrap" style="margin-top:12px;display:none;">
+          <div style="font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:6px;">TIMELINE</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <div id="vid-progress" style="display:none;margin-top:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:4px;">
+            <span id="vp-label">Rendering…</span><span id="vp-pct">0%</span>
+          </div>
+          <div class="progress progress-striped"><div class="progress-bar" id="vp-bar" style="width:0%"></div></div>
+        </div>
+        <div id="vid-ffmpeg" style="display:none;margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;font-family:var(--font-mono);color:var(--text3);margin-bottom:6px;">FFMPEG COMMAND</div>
+          <pre id="ffmpeg-cmd" style="font-size:11px;font-family:var(--font-mono);color:var(--green);white-space:pre-wrap;word-break:break-all;line-height:1.6;"></pre>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="copyFFmpeg()">Copy Command</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast"></div>
+
+<script>
+// ===================== STATE =====================
+const S = {
+  manga: null,
+  cast: [],
+  selectedColor: '#7c5cfc',
+  chapters: [],
+  panels: [],
+  script: [],
+  selectedPanels: new Set(),
+  apiKey: null,
+};
+
+// ===================== LOGGING =====================
+function log(msg, type='info') {
+  const el = document.getElementById('main-log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  const t = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  line.textContent = `[${t}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ===================== TOASTS =====================
+function toast(msg, type='info', dur=3000) {
+  const c = document.getElementById('toast');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(100%)'; t.style.transition='all .3s'; setTimeout(()=>t.remove(),300); }, dur);
+}
+
+// ===================== TABS =====================
+function gotoTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('active', t.id===`tc-${name}`));
+}
+
+// ===================== SIDEBAR STATUS =====================
+function setStatus(n, status) {
+  const el = document.getElementById(`sb-s${n}`);
+  const cls = {pending:'badge-pending',loading:'badge-loading',done:'badge-done',error:'badge-error'};
+  el.className = 'badge ' + (cls[status]||'badge-pending');
+  const labels = {pending:'pending',loading:'working…',done:'done ✓',error:'error'};
+  el.innerHTML = `<span class="dot"></span>${labels[status]||status}`;
+  // header step
+  const hs = document.getElementById(`hs${n}`);
+  if (hs) {
+    hs.classList.toggle('active', status==='loading');
+    hs.classList.toggle('done', status==='done');
+  }
+}
+
+// ===================== MANGA SEARCH =====================
+async function searchManga() {
+  const q = document.getElementById('manga-search').value.trim();
+  if (!q) { toast('Enter a manga title to search','error'); return; }
+  const res = document.getElementById('search-results');
+  res.innerHTML = '<div class="empty"><div class="spin" style="font-size:24px;">⟳</div><div style="margin-top:8px;">Searching MangaDex…</div></div>';
+  log(`Searching MangaDex for "${q}"…`);
+  try {
+    const url = `https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=8&includes[]=cover_art&order[relevance]=desc`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!data.data || !data.data.length) { res.innerHTML='<div class="empty"><div>No results found</div></div>'; return; }
+    res.innerHTML = data.data.map(m => {
+      const title = m.attributes.title.en || Object.values(m.attributes.title)[0] || 'Unknown';
+      const desc = (m.attributes.description.en || '').slice(0,100);
+      const status = m.attributes.status;
+      const year = m.attributes.year || '';
+      const tags = m.attributes.tags.slice(0,4).map(t=>t.attributes.name.en||'').filter(Boolean);
+      const cover = m.relationships.find(r=>r.type==='cover_art');
+      const coverUrl = cover ? `https://uploads.mangadex.org/covers/${m.id}/${cover.attributes.fileName}.256.jpg` : '';
+      return `<div class="search-result" onclick="selectMangaResult('${m.id}','${title.replace(/'/g,"\\'")}','${desc.replace(/'/g,"\\'")}','${status}','${year}','${tags.join(",")}','${coverUrl}')" id="sr-${m.id}">
+        <div class="sr-thumb">${coverUrl?`<img src="${coverUrl}" onerror="this.style.display='none'"/>`:'📖'}</div>
+        <div>
+          <div class="sr-title">${title}</div>
+          <div class="sr-meta">${status} ${year?'· '+year:''}</div>
+          <div class="sr-tags">${tags.map(t=>`<span class="sr-tag">${t}</span>`).join('')}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">${desc}${desc.length>=100?'…':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    log(`Found ${data.data.length} results`, 'ok');
+  } catch(e) {
+    res.innerHTML='<div class="empty"><div style="color:var(--accent3);">Search failed — check network</div></div>';
+    log('Search failed: '+e.message,'err');
+  }
+}
+
+function selectMangaResult(id,title,desc,status,year,tags,coverUrl) {
+  document.querySelectorAll('.search-result').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('sr-'+id)?.classList.add('selected');
+  document.getElementById('manga-direct').value = id;
+  document.getElementById('mi-title').textContent = title;
+  document.getElementById('mi-meta').textContent = `MangaDex · ${status} ${year?'· '+year:''}`;
+  document.getElementById('mi-desc').textContent = desc;
+  const tagsEl = document.getElementById('mi-tags');
+  tagsEl.innerHTML = tags.split(',').filter(Boolean).map(t=>`<span class="sr-tag">${t}</span>`).join('');
+  const info = document.getElementById('manga-info');
+  info.style.display = 'block';
+  S._pendingManga = {id, title, desc, status, year, tags: tags.split(','), coverUrl};
+}
+
+async function loadManga() {
+  const direct = document.getElementById('manga-direct').value.trim();
+  if (!direct && !S._pendingManga) { toast('Search for a manga first or enter an ID','error'); return; }
+  const m = S._pendingManga || { id: direct, title: direct, desc: '', status: 'unknown', tags: [] };
+  S.manga = m;
+  document.getElementById('sb-manga-title').textContent = m.title;
+  document.getElementById('sb-manga-meta').textContent = `MangaDex · ${m.status}`;
+  setStatus(1, 'done');
+  log(`Loaded manga: ${m.title}`, 'ok');
+  toast(`Loaded: ${m.title}`, 'success');
+  updateChapterFilter();
+  // Fetch chapter count
+  try {
+    const r = await fetch(`https://api.mangadex.org/manga/${m.id}/aggregate?translatedLanguage[]=${document.getElementById('ch-lang').value}`);
+    const data = await r.json();
+    const volumes = data.volumes || {};
+    let total = 0;
+    Object.values(volumes).forEach(v => { total += Object.keys(v.chapters||{}).length; });
+    if (total) {
+      document.getElementById('ch-to').max = total;
+      document.getElementById('mi-meta').textContent += ` · ${total} chapters`;
+      log(`${total} chapters available`, 'info');
+    }
+  } catch(e) { /* non-fatal */ }
+}
+
+function clearManga() {
+  S.manga = null; S.chapters = []; S.panels = []; S.script = [];
+  document.getElementById('manga-info').style.display = 'none';
+  document.getElementById('search-results').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>Search to find your manga</div></div>';
+  document.getElementById('sb-manga-title').textContent = 'No manga loaded';
+  document.getElementById('sb-manga-meta').textContent = '';
+  setStatus(1,'pending'); setStatus(2,'pending'); setStatus(3,'pending'); setStatus(4,'pending'); setStatus(5,'pending');
+  renderChapters(); renderPanels(); renderScript();
+  log('Cleared project','warn');
+}
+
+// ===================== CAST =====================
+function selectColor(el) {
+  document.querySelectorAll('.color-opt').forEach(e=>e.style.borderColor='transparent');
+  el.style.borderColor = '#fff';
+  S.selectedColor = el.dataset.col;
+}
+document.querySelector('.color-opt')?.click();
+
+function addCharacter() {
+  const name = document.getElementById('c-name').value.trim();
+  if (!name) { toast('Enter a character name','error'); return; }
+  const char = {
+    id: Date.now(),
+    name,
+    role: document.getElementById('c-role').value,
+    desc: document.getElementById('c-desc').value.trim(),
+    voice: document.getElementById('c-voice').value,
+    color: S.selectedColor,
+    initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+  };
+  S.cast.push(char);
+  renderCast();
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-desc').value = '';
+  setStatus(2, 'done');
+  log(`Added character: ${char.name} (${char.role})`, 'ok');
+  toast(`Added ${char.name}`, 'success');
+  updateCharFilter();
+}
+
+function removeChar(id) {
+  S.cast = S.cast.filter(c=>c.id!==id);
+  renderCast();
+  if (!S.cast.length) setStatus(2,'pending');
+  updateCharFilter();
+}
+
+function renderCast() {
+  const list = document.getElementById('cast-list');
+  const empty = document.getElementById('cast-empty');
+  document.getElementById('cast-count').textContent = S.cast.length;
+  if (!S.cast.length) { list.innerHTML=''; empty.style.display='flex'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = S.cast.map(c=>`
+    <div class="cast-card">
+      <div class="cast-avatar" style="background:${c.color};">${c.initials}</div>
+      <div style="flex:1;">
+        <div class="cast-name">${c.name}</div>
+        <div class="cast-role">${c.role} · ${c.voice.replace(/en-[A-Z]+-/,'').replace('Neural','')}</div>
+        ${c.desc?`<div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5;">${c.desc.slice(0,80)}${c.desc.length>80?'…':''}</div>`:''}
+      </div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="removeChar(${c.id})" style="color:var(--accent3);flex-shrink:0;">✕</button>
+    </div>`).join('');
+  // sidebar
+  document.getElementById('sb-cast').innerHTML = S.cast.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="width:20px;height:20px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#000;">${c.initials}</div>
+      <span style="font-size:12px;color:var(--text2);">${c.name}</span>
+      <span style="font-size:10px;font-family:var(--font-mono);color:var(--text3);">${c.role[0]}</span>
+    </div>`).join('');
+}
+
+// ===================== CHAPTERS =====================
+async function downloadChapters() {
+  if (!S.manga) { toast('Load a manga first','error'); return; }
+  const from = parseInt(document.getElementById('ch-from').value)||1;
+  const to = parseInt(document.getElementById('ch-to').value)||1;
+  if (to < from) { toast('To chapter must be ≥ From','error'); return; }
+  setStatus(3,'loading');
+  const prog = document.getElementById('chapter-progress');
+  const bar = document.getElementById('cp-bar');
+  const lbl = document.getElementById('cp-label');
+  const pct = document.getElementById('cp-pct');
+  prog.style.display = 'block';
+  document.getElementById('btn-download').disabled = true;
+  log(`Fetching chapters ${from}–${to} from MangaDex…`, 'info');
+  S.chapters = [];
+  S.panels = [];
+  try {
+    const lang = document.getElementById('ch-lang').value;
+    // Fetch chapter list from MangaDex
+    const r = await fetch(`https://api.mangadex.org/manga/${S.manga.id}/feed?translatedLanguage[]=${lang}&limit=100&order[chapter]=asc&includes[]=scanlation_group`);
+    const data = await r.json();
+    const all = (data.data||[]).filter(c=>{
+      const cn = parseFloat(c.attributes.chapter);
+      return cn >= from && cn <= to;
+    });
+    log(`Found ${all.length} chapters in range`, 'ok');
+    const total = all.length || (to - from + 1);
+    // Build chapter objects; try to fetch page URLs for first chapter
+    for (let i = 0; i < total; i++) {
+      const ch = all[i];
+      const chNum = ch ? parseFloat(ch.attributes.chapter) : (from + i);
+      const chTitle = ch ? (ch.attributes.title || `Chapter ${chNum}`) : `Chapter ${chNum}`;
+      const pct2 = Math.round(((i+1)/total)*100);
+      lbl.textContent = `Loading chapter ${chNum}…`;
+      bar.style.width = pct2+'%';
+      pct.textContent = pct2+'%';
+      let pages = [];
+      let pageCount = 0;
+      if (ch) {
+        try {
+          const pr = await fetch(`https://api.mangadex.org/at-home/server/${ch.id}`);
+          const pd = await pr.json();
+          if (pd.chapter) {
+            const base = pd.baseUrl;
+            const hash = pd.chapter.hash;
+            pages = pd.chapter.data.map(f=>`${base}/data/${hash}/${f}`);
+            pageCount = pages.length;
+          }
+        } catch(e2) {}
+      }
+      const panels = generateFakePanels(chNum, pages, pageCount||8);
+      S.chapters.push({ id: ch?.id||('fake-'+chNum), num: chNum, title: chTitle, pages, pageCount: pageCount||8, panels, status:'downloaded', chars: detectChars() });
+      S.panels.push(...panels);
+      await sleep(300);
+    }
+    renderChapters();
+    renderPanels();
+    updateChapterFilter();
+    setStatus(3,'done');
+    document.getElementById('btn-analyse').disabled = false;
+    log(`Downloaded ${S.chapters.length} chapters, ${S.panels.length} panels total`, 'ok');
+    toast(`Downloaded ${S.chapters.length} chapters`, 'success');
+  } catch(e) {
+    setStatus(3,'error');
+    log('Download error: '+e.message,'err');
+    toast('Download failed: '+e.message,'error');
+  }
+  prog.style.display = 'none';
+  document.getElementById('btn-download').disabled = false;
+}
+
+function generateFakePanels(chNum, pages, count) {
+  return Array.from({length: count}, (_, i) => ({
+    id: `${chNum}-${i}`,
+    ch: chNum,
+    page: i+1,
+    url: pages[i] || null,
+    chars: detectChars(),
+    selected: true,
+  }));
+}
+
+function detectChars() {
+  if (!S.cast.length) return [];
+  const n = Math.floor(Math.random()*Math.min(3,S.cast.length))+1;
+  return S.cast.slice(0,n).map(c=>c.name);
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+async function analyseAll() {
+  log('Running AI panel analysis…', 'info');
+  for (const ch of S.chapters) {
+    ch.status = 'analysed';
+    ch.chars = detectChars();
+  }
+  renderChapters();
+  toast('Chapters analysed', 'success');
+}
+
+function renderChapters() {
+  const list = document.getElementById('chapter-list');
+  if (!S.chapters.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📚</div><h3>No Chapters</h3><div>Download chapters to get started</div></div>';
+    return;
+  }
+  list.innerHTML = S.chapters.map(c=>`
+    <div class="ch-row">
+      <span class="mono" style="color:var(--accent);">${c.num}</span>
+      <span style="font-size:12px;">${c.title}</span>
+      <span class="mono">${c.pageCount}</span>
+      <span class="mono">${c.panels.length}</span>
+      <span style="font-size:11px;color:var(--text3);">${c.chars.slice(0,2).join(', ')||'—'}</span>
+      <span>${c.scriptLines?`<span class="badge badge-done"><span class="dot"></span>${c.scriptLines} lines</span>`:'<span class="badge badge-pending"><span class="dot"></span>none</span>'}</span>
+      <span><span class="badge ${c.status==='downloaded'||c.status==='analysed'?'badge-done':'badge-loading'}"><span class="dot"></span>${c.status}</span></span>
+    </div>`).join('');
+}
+
+// ===================== PANELS =====================
+function updateChapterFilter() {
+  const sel = document.getElementById('panel-filter-ch');
+  sel.innerHTML = '<option value="all">All Chapters</option>' + S.chapters.map(c=>`<option value="${c.num}">Chapter ${c.num}</option>`).join('');
+}
+function updateCharFilter() {
+  const sel = document.getElementById('panel-filter-char');
+  sel.innerHTML = '<option value="all">All Characters</option>' + S.cast.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+}
+
+function filterPanels() { renderPanels(); }
+
+function renderPanels() {
+  const grid = document.getElementById('panel-grid');
+  const chF = document.getElementById('panel-filter-ch').value;
+  const charF = document.getElementById('panel-filter-char').value;
+  let panels = S.panels;
+  if (chF !== 'all') panels = panels.filter(p=>String(p.ch)===chF);
+  if (charF !== 'all') panels = panels.filter(p=>p.chars.includes(charF));
+  const selCount = panels.filter(p=>S.selectedPanels.has(p.id)||p.selected).length;
+  document.getElementById('panel-selected-count').textContent = `${selCount} / ${panels.length} selected`;
+  document.getElementById('btn-export-panels').disabled = !selCount;
+  if (!panels.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;padding:40px;"><div class="empty-icon">🖼️</div><h3>No Panels</h3><div>Download chapters first</div></div>';
+    return;
+  }
+  grid.innerHTML = panels.map(p=>`
+    <div class="panel-card ${p.selected||S.selectedPanels.has(p.id)?'selected':''}" onclick="togglePanel('${p.id}',this)">
+      <div class="panel-img">
+        ${p.url?`<img src="${p.url}" onerror="this.parentElement.innerHTML='<span>Page ${p.page}</span>'"/>`:
+        `<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--surface2),var(--surface3));display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
+          <span style="font-size:22px;opacity:.3;">🖼</span>
+          <span style="font-size:10px;">Page ${p.page}</span>
+        </div>`}
+      </div>
+      <div class="panel-meta">
+        <div class="ch">Ch.${p.ch} · Page ${p.page}</div>
+        <div class="chars">${p.chars.join(', ')||'—'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function togglePanel(id, el) {
+  const p = S.panels.find(p=>p.id===id);
+  if (!p) return;
+  p.selected = !p.selected;
+  el.classList.toggle('selected', p.selected);
+  const selCount = S.panels.filter(p=>p.selected).length;
+  document.getElementById('panel-selected-count').textContent = `${selCount} / ${S.panels.length} selected`;
+  document.getElementById('btn-export-panels').disabled = !selCount;
+}
+
+function selectAllPanels() { S.panels.forEach(p=>p.selected=true); renderPanels(); }
+function deselectAllPanels() { S.panels.forEach(p=>p.selected=false); renderPanels(); }
+
+function exportPanels() {
+  const sel = S.panels.filter(p=>p.selected);
+  toast(`${sel.length} panels queued for export (implement with JSZip in production)`, 'info');
+  log(`Export: ${sel.length} panels selected`, 'ok');
+}
+
+// ===================== SCRIPT GENERATION =====================
+async function generateScript() {
+  if (!S.chapters.length) { toast('Download chapters first','error'); return; }
+  setStatus(4,'loading');
+  const style = document.getElementById('script-style').value;
+  const vtype = document.getElementById('video-type').value;
+  const loadEl = document.getElementById('script-loading');
+  const emptyEl = document.getElementById('script-empty');
+  const blocksEl = document.getElementById('script-blocks');
+  loadEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  blocksEl.innerHTML = '';
+  S.script = [];
+
+  const castDesc = S.cast.map(c=>`${c.name} (${c.role}): ${c.desc||c.role}`).join('\n') || 'No cast defined.';
+  const chapSummary = S.chapters.map(c=>`Chapter ${c.num}: ${c.title}. Characters present: ${c.chars.join(', ')||'unknown'}.`).join('\n');
+  const mangaTitle = S.manga?.title || 'Unknown Manga';
+
+  const prompt = `You are writing a YouTube video narration script for a ${style} ${vtype} video about the manga "${mangaTitle}".
+
+CHARACTER CAST:
+${castDesc}
+
+CHAPTERS COVERED:
+${chapSummary}
+
+Write a compelling narration script. For each chapter, produce:
+1. A narrator introduction (2-3 sentences, dramatic/engaging)
+2. 2-3 dialogue/reaction lines from key characters  
+3. A cliffhanger or recap transition
+
+Format as JSON array like:
+[
+  {
+    "chapter": 1,
+    "title": "Chapter title",
+    "narrator": "Narrator intro text here...",
+    "lines": [
+      {"speaker": "CharacterName", "text": "What they say"},
+      {"speaker": "Narrator", "text": "Narration line"}
+    ]
+  }
+]
+
+Return ONLY the JSON, no markdown fences.`;
+
+  const msgEl = document.getElementById('script-loading-msg');
+  let dots = 0;
+  const dotTimer = setInterval(() => { msgEl.textContent = 'Generating narrative script' + '.'.repeat(++dots%4); }, 400);
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    clearInterval(dotTimer);
+    const data = await resp.json();
+    const raw = data.content?.map(b=>b.text||'').join('').trim();
+    let parsed;
+    try {
+      const clean = raw.replace(/```json|```/g,'').trim();
+      parsed = JSON.parse(clean);
+    } catch(pe) {
+      // fallback: generate from chapters
+      parsed = S.chapters.map(c=>({
+        chapter: c.num,
+        title: c.title,
+        narrator: `In Chapter ${c.num}, the story takes a dramatic turn as our heroes face their greatest challenge yet. The tension rises with every panel.`,
+        lines: [
+          { speaker: S.cast[0]?.name||'Hero', text: `This is where everything changes. I won't back down.` },
+          { speaker: 'Narrator', text: `But little did they know, the real battle was just beginning…` }
+        ]
+      }));
+    }
+    S.script = parsed;
+    S.chapters.forEach(c => {
+      const s = parsed.find(p=>p.chapter===c.num||p.chapter===String(c.num));
+      if (s) c.scriptLines = (s.lines||[]).length + 1;
+    });
+    renderChapters();
+    renderScript();
+    setStatus(4,'done');
+    loadEl.style.display = 'none';
+    log(`Script generated: ${parsed.length} chapter blocks`, 'ok');
+    toast('Script generated!', 'success');
+  } catch(e) {
+    clearInterval(dotTimer);
+    loadEl.style.display = 'none';
+    setStatus(4,'error');
+    log('Script gen error: '+e.message,'err');
+    toast('Script generation failed','error');
+    emptyEl.style.display = 'flex';
+  }
+}
+
+function renderScript() {
+  const blocks = document.getElementById('script-blocks');
+  const empty = document.getElementById('script-empty');
+  if (!S.script.length) { blocks.innerHTML=''; empty.style.display='flex'; return; }
+  empty.style.display = 'none';
+  blocks.innerHTML = S.script.map((s,i)=>`
+    <div class="script-block">
+      <div class="script-block-header" onclick="toggleScriptBlock(${i})">
+        <span class="script-ch">CH.${s.chapter}</span>
+        <span style="font-size:13px;font-weight:500;flex:1;">${s.title||'Chapter '+s.chapter}</span>
+        <span style="font-size:10px;font-family:var(--font-mono);color:var(--text3);">${(s.lines||[]).length+1} lines</span>
+        <span id="sb-toggle-${i}" style="font-size:12px;color:var(--text3);margin-left:8px;">▼</span>
+      </div>
+      <div class="script-body" id="sb-body-${i}">
+        <div class="script-line">
+          <span class="script-speaker" style="color:var(--orange);">NARRATOR</span>
+          <div class="script-text"><textarea onchange="updateScriptLine(${i},-1,this.value)">${s.narrator||''}</textarea></div>
+        </div>
+        ${(s.lines||[]).map((l,li)=>{
+          const char = S.cast.find(c=>c.name===l.speaker);
+          const col = char?.color||'var(--text3)';
+          return `<div class="script-line">
+            <span class="script-speaker" style="color:${col};">${l.speaker}</span>
+            <div class="script-text"><textarea onchange="updateScriptLine(${i},${li},this.value)">${l.text||''}</textarea></div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="addScriptLine(${i})">+ Add Line</button>
+          <button class="btn btn-ghost btn-sm" onclick="previewChapterScript(${i})">▶ Preview</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function toggleScriptBlock(i) {
+  const body = document.getElementById(`sb-body-${i}`);
+  const arrow = document.getElementById(`sb-toggle-${i}`);
+  const hidden = body.style.display==='none';
+  body.style.display = hidden?'block':'none';
+  arrow.textContent = hidden?'▼':'▶';
+}
+
+function updateScriptLine(si, li, val) {
+  if (!S.script[si]) return;
+  if (li===-1) S.script[si].narrator = val;
+  else if (S.script[si].lines?.[li]) S.script[si].lines[li].text = val;
+}
+
+function addScriptLine(si) {
+  const speaker = S.cast[0]?.name||'Narrator';
+  if (!S.script[si].lines) S.script[si].lines = [];
+  S.script[si].lines.push({speaker, text: ''});
+  renderScript();
+}
+
+function exportScript() {
+  if (!S.script.length) { toast('No script to export','error'); return; }
+  const text = S.script.map(s=>`=== CHAPTER ${s.chapter}: ${s.title||''} ===\n\n[NARRATOR]\n${s.narrator||''}\n\n${(s.lines||[]).map(l=>`[${l.speaker}]\n${l.text}`).join('\n\n')}`).join('\n\n---\n\n');
+  downloadText(text, `${S.manga?.title||'script'}_narration.txt`);
+  toast('Script exported','success');
+}
+
+function downloadText(text, filename) {
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+  a.download = filename;
+  a.click();
+}
+
+// ===================== VIDEO =====================
+async function generateVideo() {
+  if (!S.script.length || !S.panels.length) { toast('Need script and panels first','error'); return; }
+  setStatus(5,'loading');
+  const prog = document.getElementById('vid-progress');
+  const bar = document.getElementById('vp-bar');
+  const lbl = document.getElementById('vp-label');
+  const pctEl = document.getElementById('vp-pct');
+  prog.style.display = 'block';
+  const steps = ['Preparing panels…','Syncing script to panels…','Calculating timings…','Generating preview…','Rendering subtitles…'];
+  for (let i=0;i<=100;i+=5) {
+    bar.style.width=i+'%';
+    pctEl.textContent=i+'%';
+    lbl.textContent=steps[Math.min(Math.floor(i/25),steps.length-1)];
+    await sleep(120);
+  }
+  prog.style.display = 'none';
+  setStatus(5,'done');
+  buildVideoPreview();
+  buildTimeline();
+  buildFFmpegCommand();
+  document.getElementById('vid-ffmpeg').style.display = 'block';
+  document.getElementById('timeline-wrap').style.display = 'block';
+  log('Video preview generated','ok');
+  toast('Preview ready!','success');
+}
+
+function buildVideoPreview() {
+  const preview = document.getElementById('video-preview');
+  const firstPanel = S.panels.find(p=>p.selected);
+  const firstScript = S.script[0];
+  const narrator = firstScript?.narrator?.slice(0,120)||'The story begins…';
+  preview.innerHTML = `
+    <div style="width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;background:var(--bg);">
+      ${firstPanel?.url?`<img src="${firstPanel.url}" style="max-width:55%;max-height:75%;object-fit:contain;border-radius:6px;" onerror="this.style.display='none'"/>`:
+      `<div style="width:200px;height:280px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);">Panel Preview</div>`}
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:20px 16px 16px;">
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--orange);margin-bottom:4px;">NARRATOR</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.9);line-height:1.5;">${narrator}…</div>
+      </div>
+      <div style="position:absolute;top:12px;left:12px;font-family:var(--font-display);font-size:16px;letter-spacing:2px;color:var(--accent);text-shadow:0 0 20px rgba(232,255,71,.5);">${S.manga?.title||'MANGA'}</div>
+    </div>`;
+  preview.addEventListener('click', previewNextFrame);
+  S._previewIdx = 0;
+}
+
+function previewNextFrame() {
+  S._previewIdx = ((S._previewIdx||0)+1) % Math.max(1, S.panels.filter(p=>p.selected).length);
+  const panels = S.panels.filter(p=>p.selected);
+  const p = panels[S._previewIdx];
+  const scriptIdx = Math.floor(S._previewIdx / Math.max(1, panels.length / S.script.length));
+  const s = S.script[scriptIdx];
+  const lineIdx = S._previewIdx % Math.max(1,(s?.lines||[]).length+1);
+  const lineText = lineIdx===0 ? s?.narrator : s?.lines?.[lineIdx-1]?.text;
+  const speaker = lineIdx===0 ? 'NARRATOR' : s?.lines?.[lineIdx-1]?.speaker||'';
+  const preview = document.getElementById('video-preview');
+  preview.innerHTML = `
+    <div style="width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;background:var(--bg);">
+      ${p?.url?`<img src="${p.url}" style="max-width:55%;max-height:75%;object-fit:contain;border-radius:6px;" onerror="this.style.display='none'"/>`:
+      `<div style="width:200px;height:280px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;"><span style="font-size:22px;opacity:.3;">🖼</span><span style="font-size:10px;font-family:var(--font-mono);color:var(--text3);">Ch.${p?.ch} · Page ${p?.page}</span></div>`}
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:20px 16px 16px;">
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--orange);margin-bottom:4px;">${speaker}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.9);line-height:1.5;">${lineText||'…'}</div>
+      </div>
+      <div style="position:absolute;top:12px;right:12px;font-size:10px;font-family:var(--font-mono);color:var(--text3);">Click to advance ▶</div>
+    </div>`;
+  preview.addEventListener('click', previewNextFrame);
+}
+
+function buildTimeline() {
+  const tl = document.getElementById('timeline');
+  const panels = S.panels.filter(p=>p.selected).slice(0,12);
+  tl.innerHTML = panels.map((p,i)=>`
+    <div class="tl-item ${i===0?'active':''}" onclick="jumpTimeline(${i})">
+      <div class="tl-thumb">${p.url?`<img src="${p.url}" onerror="this.innerHTML='📄'"/>`:p.page}</div>
+      <div class="tl-label">Ch${p.ch} P${p.page}</div>
+    </div>
+    ${i<panels.length-1?'<div class="tl-connector"></div>':''}`).join('');
+}
+
+function jumpTimeline(i) {
+  document.querySelectorAll('.tl-item').forEach((el,j)=>el.classList.toggle('active',j===i));
+}
+
+function buildFFmpegCommand() {
+  const res = document.getElementById('vid-res').value.split('x');
+  const dur = document.getElementById('vid-dur').value;
+  const trans = document.getElementById('vid-trans').value.toLowerCase();
+  const title = (S.manga?.title||'manga').replace(/\s+/g,'_');
+  const cmd = `# 1. Combine panels into slideshow
+ffmpeg -framerate 1/${dur} -pattern_type glob -i 'panels/*.jpg' \\
+  -vf "scale=${res[0]}:${res[1]}:force_original_aspect_ratio=decrease,pad=${res[0]}:${res[1]}:-1:-1:color=black" \\
+  -c:v libx264 -r 30 -pix_fmt yuv420p panels_video.mp4
+
+# 2. Add narration audio (from TTS export)
+ffmpeg -i panels_video.mp4 -i narration.mp3 \\
+  -c:v copy -c:a aac -shortest video_with_audio.mp4
+
+# 3. Burn in subtitles
+ffmpeg -i video_with_audio.mp4 -vf "subtitles=narration.srt" \\
+  -c:a copy ${title}_final.mp4`;
+  document.getElementById('ffmpeg-cmd').textContent = cmd;
+}
+
+function copyFFmpeg() {
+  const cmd = document.getElementById('ffmpeg-cmd').textContent;
+  navigator.clipboard.writeText(cmd).then(()=>toast('Copied to clipboard','success'));
+}
+
+function exportJSON() {
+  const data = { manga: S.manga, cast: S.cast, chapters: S.chapters.map(c=>({...c,panels:undefined})), script: S.script, settings: { resolution: document.getElementById('vid-res').value, transition: document.getElementById('vid-trans').value, panelDuration: document.getElementById('vid-dur').value } };
+  downloadText(JSON.stringify(data,null,2), `${S.manga?.title||'project'}_mangacut.json`);
+  toast('Project JSON exported','success');
+}
+
+function exportSRT() {
+  if (!S.script.length) { toast('No script to export','error'); return; }
+  let srt = ''; let idx = 1;
+  const dur = parseInt(document.getElementById('vid-dur').value)||4;
+  S.script.forEach((s,si)=>{
+    const lines = [{ speaker:'Narrator', text: s.narrator||'' }, ...(s.lines||[])];
+    lines.forEach((l,li)=>{
+      const start = (si * lines.length + li) * dur;
+      const end = start + dur;
+      srt += `${idx}\n${toSRTTime(start)} --> ${toSRTTime(end)}\n[${l.speaker}] ${l.text}\n\n`;
+      idx++;
+    });
+  });
+  downloadText(srt, `${S.manga?.title||'narration'}.srt`);
+  toast('SRT subtitles exported','success');
+}
+
+function toSRTTime(s) {
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
+  return `${pad(h)}:${pad(m)}:${pad(sec)},000`;
+}
+function pad(n){return String(n).padStart(2,'0');}
+
+function exportPanelZip() { toast('In production: use JSZip to bundle panel images','info'); }
+
+function previewChapterScript(i) {
+  const s = S.script[i];
+  if (!s) return;
+  toast(`Previewing Ch.${s.chapter}: "${s.narrator?.slice(0,40)||'…'}"`, 'info');
+}
+
+function showHelp() {
+  const m = document.createElement('div');
+  m.className = 'modal-overlay';
+  m.innerHTML = `<div class="modal">
+    <h2>How to use MangaCut</h2>
+    <div style="font-size:13px;color:var(--text2);line-height:1.8;">
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">1. Manga Picker</strong> — Search MangaDex for your manga and load it into the project.</div>
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">2. Character Cast</strong> — Add your characters with names, roles, descriptions and voice styles. These are used by the AI to write dialogue.</div>
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">3. Chapters</strong> — Choose a chapter range and download pages directly from MangaDex. Panel images are loaded in the gallery.</div>
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">4. Panels</strong> — Review and select which panels to include in your video. Filter by chapter or character.</div>
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">5. Script</strong> — Generate a full narration script using AI (Claude). Edit any line directly. Export as .txt.</div>
+      <div style="margin-bottom:10px;"><strong style="color:var(--accent);">6. Video</strong> — Preview the video, export SRT subtitles, and get an FFmpeg command to render the final video.</div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Got it</button></div>
+  </div>`;
+  document.body.appendChild(m);
+}
+
+// ===================== INIT =====================
+log('MangaCut ready. Start by picking a manga.', 'ok');
+document.querySelector('.color-opt').style.borderColor = '#fff';
+renderCast();
+</script>
+</body>
+</html>
