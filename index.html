@@ -207,6 +207,8 @@ select option{background:var(--surface2);}
 .empty-icon{font-size:40px;opacity:.4;}
 .empty h3{font-family:var(--font-display);font-size:22px;letter-spacing:1px;color:var(--text3);}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -367,6 +369,7 @@ select option{background:var(--surface2);}
             </div>
           </div>
           <button class="btn btn-primary" onclick="addCharacter()" style="width:100%;">Add to Cast</button>
+          <button class="btn btn-ghost" onclick="autoDetectCharacters()" style="width:100%;margin-top:8px;" id="btn-auto-detect">🤖 Auto-detect from Panels</button>
         </div>
       </div>
       <div>
@@ -755,6 +758,107 @@ function renderCast() {
       <span style="font-size:12px;color:var(--text2);">${c.name}</span>
       <span style="font-size:10px;font-family:var(--font-mono);color:var(--text3);">${c.role[0]}</span>
     </div>`).join('');
+}
+
+async function autoDetectCharacters() {
+  if (!S.panels.length) { toast('Download chapters first','error'); return; }
+  
+  const btn = document.getElementById('btn-auto-detect');
+  btn.disabled = true;
+  btn.textContent = '⟳ Analyzing panels…';
+  
+  log('Starting character detection via OCR…', 'info');
+  toast('Analyzing panels for character names… This may take a while', 'info');
+  
+  const detectedNames = new Set();
+  const samplePanels = S.panels.slice(0, Math.min(10, S.panels.length)); // Sample first 10 panels
+  let processed = 0;
+  
+  try {
+    // Initialize Tesseract worker
+    const { TesseractWorker } = Tesseract;
+    const worker = new TesseractWorker();
+    
+    for (const panel of samplePanels) {
+      if (!panel.url) continue;
+      
+      try {
+        log(`Analyzing panel ${panel.id}…`, 'ok');
+        
+        // Fetch panel image
+        const response = await fetch(panel.url);
+        const blob = await response.blob();
+        
+        // Run OCR
+        const result = await worker.recognize(blob);
+        const text = result.data.text || '';
+        
+        // Extract potential character names (words in all caps or title case)
+        const words = text.split(/[\s\n,;:()[\]]+/).filter(w => w.length > 1 && w.length < 20);
+        words.forEach(word => {
+          // Look for names: single words or two-word names (likely character names)
+          if (/^[A-Z][a-z]*$/.test(word) || /^[A-Z]+-?[A-Z][a-z]*$/.test(word)) {
+            detectedNames.add(word);
+          }
+        });
+        
+        processed++;
+        if (processed % 2 === 0) {
+          log(`Processed ${processed}/${samplePanels.length} panels…`, 'ok');
+        }
+      } catch(e) {
+        console.error(`Failed to analyze panel ${panel.id}:`, e);
+      }
+    }
+    
+    await worker.terminate();
+    
+    // Filter out common non-character words
+    const commonWords = ['The', 'And', 'This', 'That', 'What', 'Who', 'Where', 'When', 'Why', 'How', 'Is', 'Are', 'Were', 'Been', 'Have', 'Has', 'Will', 'Can', 'Could', 'Should', 'Would', 'For', 'With', 'From', 'But', 'Not', 'All', 'Each', 'Every', 'Both', 'Either', 'Neither', 'Just', 'Only', 'Still', 'Again', 'Now', 'Then', 'Here', 'There', 'Up', 'Down', 'Out', 'In', 'On'];
+    const filtered = Array.from(detectedNames).filter(name => !commonWords.includes(name));
+    
+    if (filtered.length === 0) {
+      log('No character names detected. Try manual entry.', 'warn');
+      toast('No character names detected in panels. Try manual entry.', 'info');
+    } else {
+      log(`Detected ${filtered.length} potential character names`, 'ok');
+      
+      // Add detected characters
+      let added = 0;
+      for (const name of filtered.slice(0, 5)) { // Limit to first 5 detected
+        if (!S.cast.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+          const colors = ['#7c5cfc', '#e8ff47', '#ff5c5c', '#4aff9a', '#3cb8ff', '#ffaa3c'];
+          const char = {
+            id: Date.now() + Math.random(),
+            name,
+            role: 'Character',
+            desc: 'Detected from manga panels via OCR',
+            voice: 'en-US-JennyNeural',
+            color: colors[added % colors.length],
+            initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+          };
+          S.cast.push(char);
+          added++;
+        }
+      }
+      
+      if (added > 0) {
+        renderCast();
+        updateCharFilter();
+        setStatus(2, 'done');
+        log(`✓ Added ${added} characters from detection`, 'ok');
+        toast(`✓ Added ${added} characters`, 'success');
+      } else {
+        toast('All detected names are already in cast', 'info');
+      }
+    }
+  } catch(e) {
+    log('Detection error: ' + e.message, 'err');
+    toast('Character detection failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 Auto-detect from Panels';
+  }
 }
 
 // ===================== CHAPTERS =====================
@@ -1243,7 +1347,51 @@ function toSRTTime(s) {
 }
 function pad(n){return String(n).padStart(2,'0');}
 
-function exportPanelZip() { toast('In production: use JSZip to bundle panel images','info'); }
+async function exportPanelZip() {
+  if (!S.panels.length) { toast('Download chapters first','error'); return; }
+  
+  const zip = new JSZip();
+  const folder = zip.folder('manga-panels');
+  let count = 0;
+  const total = S.panels.length;
+  let failed = 0;
+  
+  log(`Starting to download ${total} panel images…`, 'info');
+  toast(`Downloading ${total} images… This may take a while`, 'info');
+  
+  for (const panel of S.panels) {
+    if (!panel.url) { failed++; continue; }
+    try {
+      const response = await fetch(panel.url);
+      const blob = await response.blob();
+      const filename = `ch${String(panel.ch).padStart(3,'0')}_p${String(panel.page).padStart(3,'0')}.png`;
+      folder.file(filename, blob);
+      count++;
+      if (count % 5 === 0) {
+        log(`Downloaded ${count}/${total} images…`, 'ok');
+      }
+    } catch(e) {
+      failed++;
+      console.error(`Failed to download panel ${panel.id}:`, e);
+    }
+  }
+  
+  if (count === 0) { toast('Failed to download any images','error'); return; }
+  
+  log(`Downloaded ${count} images, creating ZIP…`, 'info');
+  const content = await zip.generateAsync({type: 'blob'});
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `manga-panels-${Date.now()}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  log(`✓ Downloaded ${count} images as ZIP${failed>0?` (${failed} failed)':''}`, 'ok');
+  toast(`✓ Downloaded ${count} images as ZIP`, 'success');
+}
 
 function previewChapterScript(i) {
   const s = S.script[i];
