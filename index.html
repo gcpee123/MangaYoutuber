@@ -616,8 +616,7 @@ async function searchManga() {
   res.innerHTML = '<div class="empty"><div class="spin" style="font-size:24px;">⟳</div><div style="margin-top:8px;">Searching MangaDex…</div></div>';
   log(`Searching MangaDex for "${q}"…`);
   try {
-    const url = `https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=8&includes[]=cover_art&order[relevance]=desc`;
-    const r = await fetch(url);
+const url = `https://cors-anywhere.herokuapp.com/https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=8&includes[]=cover_art&order[relevance]=desc`;    const r = await fetch(url);
     const data = await r.json();
     if (!data.data || !data.data.length) { res.innerHTML='<div class="empty"><div>No results found</div></div>'; return; }
     res.innerHTML = data.data.map(m => {
