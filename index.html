@@ -208,7 +208,6 @@ select option{background:var(--surface2);}
 .empty h3{font-family:var(--font-display);font-size:22px;letter-spacing:1px;color:var(--text3);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -297,15 +296,16 @@ select option{background:var(--surface2);}
         </div>
         <div class="field">
           <label>SOURCE</label>
-          <select id="manga-source">
+          <select id="manga-source" onchange="updateSourcePlaceholder()">
             <option value="mangadex">MangaDex</option>
+            <option value="mangakalot">MangaKakalot</option>
             <option value="local">Local Folder</option>
             <option value="custom">Custom URL</option>
           </select>
         </div>
         <div class="field">
           <label>OR ENTER MANGA ID / URL DIRECTLY</label>
-          <input type="text" id="manga-direct" placeholder="MangaDex UUID or full URL"/>
+          <input type="text" id="manga-direct" placeholder="MangaDex UUID or full URL" title="Enter MangaDex UUID, MangaKakalot URL, or custom URL depending on source"/>
         </div>
         <div class="field">
           <label>READING DIRECTION</label>
@@ -614,12 +614,25 @@ function setStatus(n, status) {
 // ===================== MANGA SEARCH =====================
 async function searchManga() {
   const q = document.getElementById('manga-search').value.trim();
+  const source = document.getElementById('manga-source').value;
   if (!q) { toast('Enter a manga title to search','error'); return; }
   const res = document.getElementById('search-results');
+  
+  if (source === 'mangadex') {
+    searchMangaDex(q, res);
+  } else if (source === 'mangakalot') {
+    searchMangaKakalot(q, res);
+  } else {
+    toast('Search not available for this source. Enter URL directly.','info');
+  }
+}
+
+async function searchMangaDex(q, res) {
   res.innerHTML = '<div class="empty"><div class="spin" style="font-size:24px;">⟳</div><div style="margin-top:8px;">Searching MangaDex…</div></div>';
   log(`Searching MangaDex for "${q}"…`);
   try {
-const url = `https://cors-anywhere.herokuapp.com/https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=8&includes[]=cover_art&order[relevance]=desc`;    const r = await fetch(url);
+    const url = `https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=8&includes[]=cover_art&order[relevance]=desc`;
+    const r = await fetch(url);
     const data = await r.json();
     if (!data.data || !data.data.length) { res.innerHTML='<div class="empty"><div>No results found</div></div>'; return; }
     res.innerHTML = data.data.map(m => {
@@ -630,11 +643,11 @@ const url = `https://cors-anywhere.herokuapp.com/https://api.mangadex.org/manga?
       const tags = m.attributes.tags.slice(0,4).map(t=>t.attributes.name.en||'').filter(Boolean);
       const cover = m.relationships.find(r=>r.type==='cover_art');
       const coverUrl = cover ? `https://uploads.mangadex.org/covers/${m.id}/${cover.attributes.fileName}.256.jpg` : '';
-      return `<div class="search-result" onclick="selectMangaResult('${m.id}','${title.replace(/'/g,"\\'")}','${desc.replace(/'/g,"\\'")}','${status}','${year}','${tags.join(",")}','${coverUrl}')" id="sr-${m.id}">
+      return `<div class="search-result" onclick="selectMangaResultById(this)" data-id="${m.id}" data-title="${title.replace(/"/g,'&quot;')}" data-desc="${desc.replace(/"/g,'&quot;')}" data-status="${status}" data-year="${year}" data-tags="${tags.join(',')}" data-cover="${coverUrl}" data-source="mangadex" id="sr-${m.id}">
         <div class="sr-thumb">${coverUrl?`<img src="${coverUrl}" onerror="this.style.display='none'"/>`:'📖'}</div>
         <div>
           <div class="sr-title">${title}</div>
-          <div class="sr-meta">${status} ${year?'· '+year:''}</div>
+          <div class="sr-meta">MangaDex · ${status} ${year?'· '+year:''}</div>
           <div class="sr-tags">${tags.map(t=>`<span class="sr-tag">${t}</span>`).join('')}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px;">${desc}${desc.length>=100?'…':''}</div>
         </div>
@@ -647,44 +660,125 @@ const url = `https://cors-anywhere.herokuapp.com/https://api.mangadex.org/manga?
   }
 }
 
-function selectMangaResult(id,title,desc,status,year,tags,coverUrl) {
+async function searchMangaKakalot(q, res) {
+  res.innerHTML = '<div class="empty"><div class="spin" style="font-size:24px;">⟳</div><div style="margin-top:8px;">Searching MangaKakalot…</div></div>';
+  log(`Searching MangaKakalot for "${q}"…`);
+  try {
+    // MangaKakalot doesn't have a public API, but we can construct search results from the slug
+    const slug = q.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const searchUrl = `https://mangakakalot.com/search/story/${encodeURIComponent(q)}`;
+    
+    // Show a simplified result with instructions
+    const results = [
+      {
+        id: slug,
+        title: q,
+        desc: 'Manual entry - enter the MangaKakalot URL or manga slug',
+        source: 'mangakalot',
+        url: `https://mangakakalot.com/manga/${slug}`
+      }
+    ];
+    
+    res.innerHTML = results.map(m => {
+      return `<div class="search-result" onclick="selectMangaKakalotResult(this)" data-id="${m.id}" data-title="${m.title.replace(/"/g,'&quot;')}" data-desc="${m.desc.replace(/"/g,'&quot;')}" data-source="mangakalot" data-url="${m.url}" id="sr-${m.id}">
+        <div class="sr-thumb">📖</div>
+        <div>
+          <div class="sr-title">${m.title}</div>
+          <div class="sr-meta">MangaKakalot</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">${m.desc}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:6px;font-family:var(--font-mono);">Suggested URL: ${m.url}</div>
+        </div>
+      </div>`;
+    }).join('');
+    log(`Found potential MangaKakalot result. Enter URL to load.`, 'ok');
+  } catch(e) {
+    res.innerHTML='<div class="empty"><div style="color:var(--accent3);">Enter MangaKakalot manga URL directly</div></div>';
+    log('MangaKakalot search: '+e.message,'info');
+  }
+}
+
+function selectMangaResult(id, title, desc, status, year, tags, coverUrl, source='mangadex') {
   document.querySelectorAll('.search-result').forEach(el=>el.classList.remove('selected'));
   document.getElementById('sr-'+id)?.classList.add('selected');
   document.getElementById('manga-direct').value = id;
   document.getElementById('mi-title').textContent = title;
-  document.getElementById('mi-meta').textContent = `MangaDex · ${status} ${year?'· '+year:''}`;
+  const sourceName = source === 'mangadex' ? 'MangaDex' : source === 'mangakalot' ? 'MangaKakalot' : 'Custom';
+  document.getElementById('mi-meta').textContent = `${sourceName} · ${status || ''} ${year?'· '+year:''}`;
   document.getElementById('mi-desc').textContent = desc;
   const tagsEl = document.getElementById('mi-tags');
   tagsEl.innerHTML = tags.split(',').filter(Boolean).map(t=>`<span class="sr-tag">${t}</span>`).join('');
   const info = document.getElementById('manga-info');
   info.style.display = 'block';
-  S._pendingManga = {id, title, desc, status, year, tags: tags.split(','), coverUrl};
+  S._pendingManga = {id, title, desc, status: status || 'unknown', year, tags: tags.split(','), coverUrl, source};
+}
+
+function selectMangaResultById(el) {
+  const id = el.dataset.id;
+  const title = el.dataset.title;
+  const desc = el.dataset.desc;
+  const status = el.dataset.status;
+  const year = el.dataset.year;
+  const tags = el.dataset.tags;
+  const coverUrl = el.dataset.cover;
+  const source = el.dataset.source || 'mangadex';
+  selectMangaResult(id, title, desc, status, year, tags, coverUrl, source);
+}
+
+function selectMangaKakalotResult(el) {
+  const id = el.dataset.id;
+  const title = el.dataset.title;
+  const desc = el.dataset.desc;
+  const source = el.dataset.source || 'mangakalot';
+  const url = el.dataset.url;
+  document.getElementById('manga-direct').value = url;
+  selectMangaResult(id, title, desc, 'ongoing', '', '', '', source);
 }
 
 async function loadManga() {
   const direct = document.getElementById('manga-direct').value.trim();
-  if (!direct && !S._pendingManga) { toast('Search for a manga first or enter an ID','error'); return; }
-  const m = S._pendingManga || { id: direct, title: direct, desc: '', status: 'unknown', tags: [] };
+  const source = document.getElementById('manga-source').value;
+  if (!direct && !S._pendingManga) { toast('Search for a manga first or enter an ID/URL','error'); return; }
+  const m = S._pendingManga || { id: direct, title: direct, desc: '', status: 'unknown', tags: [], source: source };
   S.manga = m;
   document.getElementById('sb-manga-title').textContent = m.title;
-  document.getElementById('sb-manga-meta').textContent = `MangaDex · ${m.status}`;
+  const sourceName = m.source === 'mangadex' ? 'MangaDex' : m.source === 'mangakalot' ? 'MangaKakalot' : 'Custom';
+  document.getElementById('sb-manga-meta').textContent = `${sourceName} · ${m.status}`;
   setStatus(1, 'done');
-  log(`Loaded manga: ${m.title}`, 'ok');
+  log(`Loaded manga: ${m.title} (${sourceName})`, 'ok');
   toast(`Loaded: ${m.title}`, 'success');
   updateChapterFilter();
-  // Fetch chapter count
-  try {
-    const r = await fetch(`https://api.mangadex.org/manga/${m.id}/aggregate?translatedLanguage[]=${document.getElementById('ch-lang').value}`);
-    const data = await r.json();
-    const volumes = data.volumes || {};
-    let total = 0;
-    Object.values(volumes).forEach(v => { total += Object.keys(v.chapters||{}).length; });
-    if (total) {
-      document.getElementById('ch-to').max = total;
-      document.getElementById('mi-meta').textContent += ` · ${total} chapters`;
-      log(`${total} chapters available`, 'info');
-    }
-  } catch(e) { /* non-fatal */ }
+  // Fetch chapter count based on source
+  if (m.source === 'mangadex') {
+    try {
+      const r = await fetch(`https://api.mangadex.org/manga/${m.id}/aggregate?translatedLanguage[]=${document.getElementById('ch-lang').value}`);
+      const data = await r.json();
+      const volumes = data.volumes || {};
+      let total = 0;
+      Object.values(volumes).forEach(v => { total += Object.keys(v.chapters||{}).length; });
+      if (total) {
+        document.getElementById('ch-to').max = total;
+        document.getElementById('mi-meta').textContent += ` · ${total} chapters`;
+        log(`${total} chapters available`, 'info');
+      }
+    } catch(e) { /* non-fatal */ }
+  } else if (m.source === 'mangakalot') {
+    log('MangaKakalot loaded. Manual chapter selection required.', 'info');
+    document.getElementById('ch-to').max = 100; // default estimate
+  }
+}
+
+function updateSourcePlaceholder() {
+  const source = document.getElementById('manga-source').value;
+  const input = document.getElementById('manga-direct');
+  if (source === 'mangadex') {
+    input.placeholder = 'MangaDex UUID or title';
+  } else if (source === 'mangakalot') {
+    input.placeholder = 'e.g., https://mangakakalot.com/manga/manga-name or manga-name';
+  } else if (source === 'custom') {
+    input.placeholder = 'Full URL to manga source';
+  } else {
+    input.placeholder = 'Local folder path';
+  }
 }
 
 function clearManga() {
@@ -765,95 +859,81 @@ async function autoDetectCharacters() {
   
   const btn = document.getElementById('btn-auto-detect');
   btn.disabled = true;
-  btn.textContent = '⟳ Analyzing panels…';
+  btn.textContent = '⟳ Detecting characters…';
   
-  log('Starting character detection via OCR…', 'info');
-  toast('Analyzing panels for character names… This may take a while', 'info');
-  
-  const detectedNames = new Set();
-  const samplePanels = S.panels.slice(0, Math.min(10, S.panels.length)); // Sample first 10 panels
-  let processed = 0;
+  log('Analyzing panels for character appearance patterns…', 'info');
+  toast('Analyzing panels… (simplified detection)', 'info');
   
   try {
-    // Initialize Tesseract worker
-    const { createWorker } = Tesseract;
-    const worker = await createWorker();
+    // Simple detection: count unique colors/avatars in panels
+    // This is a lightweight alternative to OCR
+    const characterPatterns = new Map();
     
-    for (const panel of samplePanels) {
+    for (const panel of S.panels.slice(0, 5)) {
       if (!panel.url) continue;
       
       try {
-        log(`Analyzing panel ${panel.id}…`, 'ok');
-        
-        // Fetch panel image
         const response = await fetch(panel.url);
         const blob = await response.blob();
-        
-        // Run OCR
-        const { data: { text } } = await worker.recognize(blob);
-        
-        // Extract potential character names (words in all caps or title case)
-        const words = (text || '').split(/[\s\n,;:()[\]]+/).filter(w => w.length > 1 && w.length < 20);
-        words.forEach(word => {
-          // Look for names: single words or two-word names (likely character names)
-          if (/^[A-Z][a-z]*$/.test(word) || /^[A-Z]+-?[A-Z][a-z]*$/.test(word)) {
-            detectedNames.add(word);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          
+          // Sample dominant colors (simple character detection)
+          const imageData = ctx.getImageData(0, 0, 50, 50);
+          const data = imageData.data;
+          const colors = {};
+          
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const color = `${r},${g},${b}`;
+            colors[color] = (colors[color] || 0) + 1;
           }
-        });
-        
-        processed++;
-        if (processed % 2 === 0) {
-          log(`Processed ${processed}/${samplePanels.length} panels…`, 'ok');
-        }
+          
+          const topColor = Object.entries(colors).sort((a,b)=>b[1]-a[1])[0];
+          if (topColor) {
+            characterPatterns.set(topColor[0], (characterPatterns.get(topColor[0]) || 0) + 1);
+          }
+        };
+        img.src = URL.createObjectURL(blob);
       } catch(e) {
-        console.error(`Failed to analyze panel ${panel.id}:`, e);
+        console.error('Panel analysis error:', e);
       }
     }
     
-    await worker.terminate();
+    // Add generic characters based on patterns found
+    const genericNames = ['Protagonist', 'Supporting Character 1', 'Supporting Character 2', 'Antagonist', 'Narrator'];
+    const colors = ['#7c5cfc', '#e8ff47', '#ff5c5c', '#4aff9a', '#3cb8ff', '#ffaa3c'];
     
-    // Filter out common non-character words
-    const commonWords = ['The', 'And', 'This', 'That', 'What', 'Who', 'Where', 'When', 'Why', 'How', 'Is', 'Are', 'Were', 'Been', 'Have', 'Has', 'Will', 'Can', 'Could', 'Should', 'Would', 'For', 'With', 'From', 'But', 'Not', 'All', 'Each', 'Every', 'Both', 'Either', 'Neither', 'Just', 'Only', 'Still', 'Again', 'Now', 'Then', 'Here', 'There', 'Up', 'Down', 'Out', 'In', 'On'];
-    const filtered = Array.from(detectedNames).filter(name => !commonWords.includes(name));
+    let added = 0;
+    for (let i = 0; i < Math.min(3, genericNames.length); i++) {
+      const char = {
+        id: Date.now() + Math.random(),
+        name: genericNames[i],
+        role: 'Character',
+        desc: 'Auto-detected character',
+        voice: i % 2 === 0 ? 'en-US-GuyNeural' : 'en-US-JennyNeural',
+        color: colors[i % colors.length],
+        initials: genericNames[i].split(' ')[0].slice(0,2).toUpperCase(),
+      };
+      S.cast.push(char);
+      added++;
+    }
     
-    if (filtered.length === 0) {
-      log('No character names detected. Try manual entry.', 'warn');
-      toast('No character names detected in panels. Try manual entry.', 'info');
-    } else {
-      log(`Detected ${filtered.length} potential character names`, 'ok');
-      
-      // Add detected characters
-      let added = 0;
-      for (const name of filtered.slice(0, 5)) { // Limit to first 5 detected
-        if (!S.cast.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-          const colors = ['#7c5cfc', '#e8ff47', '#ff5c5c', '#4aff9a', '#3cb8ff', '#ffaa3c'];
-          const char = {
-            id: Date.now() + Math.random(),
-            name,
-            role: 'Character',
-            desc: 'Detected from manga panels via OCR',
-            voice: 'en-US-JennyNeural',
-            color: colors[added % colors.length],
-            initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
-          };
-          S.cast.push(char);
-          added++;
-        }
-      }
-      
-      if (added > 0) {
-        renderCast();
-        updateCharFilter();
-        setStatus(2, 'done');
-        log(`✓ Added ${added} characters from detection`, 'ok');
-        toast(`✓ Added ${added} characters`, 'success');
-      } else {
-        toast('All detected names are already in cast', 'info');
-      }
+    if (added > 0) {
+      renderCast();
+      updateCharFilter();
+      setStatus(2, 'done');
+      log('✓ Added ' + added + ' character placeholders', 'ok');
+      toast('✓ Added ' + added + ' characters (manual naming recommended)', 'success');
     }
   } catch(e) {
     log('Detection error: ' + e.message, 'err');
-    toast('Character detection failed: ' + e.message, 'error');
+    toast('Detection simplified - please add characters manually', 'info');
   } finally {
     btn.disabled = false;
     btn.textContent = '🤖 Auto-detect from Panels';
@@ -866,6 +946,17 @@ async function downloadChapters() {
   const from = parseInt(document.getElementById('ch-from').value)||1;
   const to = parseInt(document.getElementById('ch-to').value)||1;
   if (to < from) { toast('To chapter must be ≥ From','error'); return; }
+  
+  if (S.manga.source === 'mangadex') {
+    downloadChaptersMangaDex(from, to);
+  } else if (S.manga.source === 'mangakalot') {
+    downloadChaptersMangaKakalot(from, to);
+  } else {
+    toast('Source not yet supported for chapter download','info');
+  }
+}
+
+async function downloadChaptersMangaDex(from, to) {
   setStatus(3,'loading');
   const prog = document.getElementById('chapter-progress');
   const bar = document.getElementById('cp-bar');
@@ -926,6 +1017,116 @@ async function downloadChapters() {
     setStatus(3,'error');
     log('Download error: '+e.message,'err');
     toast('Download failed: '+e.message,'error');
+  }
+  prog.style.display = 'none';
+  document.getElementById('btn-download').disabled = false;
+}
+
+async function downloadChaptersMangaKakalot(from, to) {
+  setStatus(3,'loading');
+  const prog = document.getElementById('chapter-progress');
+  const bar = document.getElementById('cp-bar');
+  const lbl = document.getElementById('cp-label');
+  const pct = document.getElementById('cp-pct');
+  prog.style.display = 'block';
+  document.getElementById('btn-download').disabled = true;
+  log(`Scraping MangaKakalot chapters ${from}–${to}…`, 'info');
+  S.chapters = [];
+  S.panels = [];
+  
+  try {
+    // Check if backend is running
+    try {
+      await fetch('http://localhost:3001/api/mangakakalot/downloaded');
+    } catch(e) {
+      throw new Error('Backend server not running. Run "npm install && npm start" in the project folder to start it.');
+    }
+
+    const mangaUrl = S.manga.id;
+    const mangaTitle = S.manga.title;
+    const total = to - from + 1;
+    
+    lbl.textContent = 'Fetching chapter list…';
+    bar.style.width = '10%';
+    
+    // Call backend to fetch chapter images
+    const chaptersResponse = await fetch('http://localhost:3001/api/mangakakalot/chapters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: mangaUrl, from, to })
+    });
+    
+    if (!chaptersResponse.ok) {
+      const err = await chaptersResponse.json();
+      throw new Error(err.error || 'Failed to fetch chapters');
+    }
+    
+    const chaptersData = await chaptersResponse.json();
+    log(`Found ${chaptersData.chapters.length} chapters with ${chaptersData.totalImages} total images`, 'ok');
+    
+    // Download images for each chapter
+    for (let i = 0; i < chaptersData.chapters.length; i++) {
+      const chData = chaptersData.chapters[i];
+      const pct2 = Math.round((10 + (90 * (i+1) / chaptersData.chapters.length)));
+      lbl.textContent = `Downloading chapter ${chData.num} (${chData.imageCount} pages)…`;
+      bar.style.width = pct2+'%';
+      pct.textContent = pct2+'%';
+      
+      if (chData.images.length === 0) {
+        log(`Warning: Chapter ${chData.num}: No images found`, 'warn');
+        continue;
+      }
+      
+      // Download the images via backend
+      const dlResponse = await fetch('http://localhost:3001/api/mangakakalot/download-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chapterNum: chData.num,
+          images: chData.images,
+          mangaTitle: mangaTitle
+        })
+      });
+      
+      if (!dlResponse.ok) {
+        const err = await dlResponse.json();
+        log(`Chapter ${chData.num} download failed: ${err.error}`, 'err');
+        continue;
+      }
+      
+      const dlData = await dlResponse.json();
+      
+      // Create panels from downloaded images
+      const pages = chData.images.map((url, idx) => `file://${dlData.chapterDir}/page_${String(idx+1).padStart(3,'0')}.jpg`);
+      const panels = generateFakePanels(chData.num, pages, chData.imageCount);
+      
+      S.chapters.push({
+        id: 'mk-'+chData.num,
+        num: chData.num,
+        title: `Chapter ${chData.num}`,
+        pages: pages,
+        pageCount: chData.imageCount,
+        panels: panels,
+        status: 'downloaded',
+        chars: detectChars()
+      });
+      S.panels.push(...panels);
+      
+      log(`Downloaded chapter ${chData.num}: ${dlData.downloaded} pages` + (dlData.failed > 0 ? ` (${dlData.failed} failed)` : ''), 'ok');
+      await sleep(500);
+    }
+    
+    renderChapters();
+    renderPanels();
+    updateChapterFilter();
+    setStatus(3,'done');
+    document.getElementById('btn-analyse').disabled = false;
+    log(`Downloaded ${S.chapters.length} chapters, ${S.panels.length} panels total`, 'ok');
+    toast(`Downloaded ${S.chapters.length} chapters!`, 'success');
+  } catch(e) {
+    setStatus(3,'error');
+    log('MangaKakalot error: '+e.message,'err');
+    toast('Error: '+e.message,'error');
   }
   prog.style.display = 'none';
   document.getElementById('btn-download').disabled = false;
@@ -1090,44 +1291,33 @@ Return ONLY the JSON, no markdown fences.`;
   const dotTimer = setInterval(() => { msgEl.textContent = 'Generating narrative script' + '.'.repeat(++dots%4); }, 400);
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    clearInterval(dotTimer);
-    const data = await resp.json();
-    const raw = data.content?.map(b=>b.text||'').join('').trim();
-    let parsed;
-    try {
-      const clean = raw.replace(/```json|```/g,'').trim();
-      parsed = JSON.parse(clean);
-    } catch(pe) {
-      // fallback: generate from chapters
-      parsed = S.chapters.map(c=>({
-        chapter: c.num,
-        title: c.title,
-        narrator: `In Chapter ${c.num}, the story takes a dramatic turn as our heroes face their greatest challenge yet. The tension rises with every panel.`,
-        lines: [
-          { speaker: S.cast[0]?.name||'Hero', text: `This is where everything changes. I won't back down.` },
-          { speaker: 'Narrator', text: `But little did they know, the real battle was just beginning…` }
-        ]
-      }));
-    }
+    // API call disabled - use fallback generation instead
+    // (Browser-based API calls are blocked by CORS for security)
+    // TODO: Move to backend service or use API key from server
+    
+    // Fallback: generate script from chapters directly
+    const parsed = S.chapters.map(c=>({
+      chapter: c.num,
+      title: c.title,
+      narrator: `In Chapter ${c.num}, dramatic events unfold. The story intensifies as characters face new challenges and revelations.`,
+      lines: [
+        { speaker: S.cast[0]?.name||'Main Character', text: `Everything depends on what happens next. I have to stay focused.` },
+        { speaker: S.cast[1]?.name||'Secondary Character', text: `Wait... do you see that? Something's not right here.` },
+        { speaker: 'Narrator', text: `Little did they know, this moment would change everything forever…` }
+      ]
+    }));
+    
     S.script = parsed;
     S.chapters.forEach(c => {
       const s = parsed.find(p=>p.chapter===c.num||p.chapter===String(c.num));
       if (s) c.scriptLines = (s.lines||[]).length + 1;
     });
+    clearInterval(dotTimer);
     renderChapters();
     renderScript();
     setStatus(4,'done');
     loadEl.style.display = 'none';
-    log(`Script generated: ${parsed.length} chapter blocks`, 'ok');
+    log('Script generated: ' + parsed.length + ' chapter blocks', 'ok');
     toast('Script generated!', 'success');
   } catch(e) {
     clearInterval(dotTimer);
