@@ -19,8 +19,14 @@ if (!fs.existsSync(downloadDir)) {
 
 // Helper to extract manga slug from URL
 function extractSlug(url) {
-  const match = url.match(/mangakakalot\.com\/manga\/([^\/]+)/);
+  const match = url.match(/(?:www\.)?mangakakalot\.(?:com|gg)\/manga\/([^\/]+)/);
   return match ? match[1] : null;
+}
+
+// Helper to extract domain from URL
+function extractDomain(url) {
+  const match = url.match(/(?:www\.)?(mangakakalot\.(?:com|gg))/);
+  return match ? match[1] : 'mangakakalot.com';
 }
 
 // Endpoint to fetch chapters from MangaKakalot
@@ -28,6 +34,7 @@ app.post('/api/mangakakalot/chapters', async (req, res) => {
   try {
     const { url, from, to } = req.body;
     const slug = extractSlug(url);
+    const domain = extractDomain(url);
     
     if (!slug) {
       return res.status(400).json({ error: 'Invalid MangaKakalot URL' });
@@ -38,7 +45,7 @@ app.post('/api/mangakakalot/chapters', async (req, res) => {
 
     for (let i = 0; i < chapterRange; i++) {
       const chNum = from + i;
-      const chapterUrl = `https://mangakakalot.com/chapter/${slug}/chapter-${chNum}`;
+      const chapterUrl = `https://${domain}/chapter/${slug}/chapter-${chNum}`;
       
       try {
         const { data } = await axios.get(chapterUrl, {
